@@ -51,7 +51,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "10h",
       });
       res.send({ token });
     });
@@ -59,7 +59,7 @@ async function run() {
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
-      const user = await usersCollection.findOne(query);
+      const user = await userCollection.findOne(query);
       if (user?.role !== "admin") {
         return res
           .status(403)
@@ -67,6 +67,11 @@ async function run() {
       }
       next();
     };
+
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -85,8 +90,22 @@ async function run() {
         res.send({ admin: false });
       }
       const query = { email: email };
-      const user = await usersCollection.findOne(query);
+      const user = await userCollection.findOne(query);
       const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
+
+    // make admin api
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
