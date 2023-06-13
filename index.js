@@ -223,6 +223,14 @@ async function run() {
       res.send(result);
     });
 
+    // Selected Class api for students
+    app.get("/savedClass/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email };
+      const result = await savedCollection.find(query).toArray();
+      res.send(result);
+    });
+
     app.post("/savedClass", async (req, res) => {
       const saved = req.body;
       const email = saved.studentEmail;
