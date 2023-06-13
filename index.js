@@ -3,10 +3,18 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+
+const corsOptions = {
+  origin: "*",
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const verifyJWT = (req, res, next) => {
@@ -49,6 +57,7 @@ async function run() {
     const userCollection = client.db("flc_db").collection("users");
     const classCollection = client.db("flc_db").collection("classes");
     const savedCollection = client.db("flc_db").collection("savedClasses");
+    const paymentCollection = client.db("flc_db").collection("payments");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -224,6 +233,13 @@ async function run() {
     });
 
     // Selected Class api for students
+    app.get("/savedClass", async (req, res) => {
+      const {id} = req.query
+      const query = {_id: new ObjectId(id)}
+      const result = await savedCollection.findOne(query)
+      res.send(result);
+    });
+    
     app.get("/savedClass/:email", async (req, res) => {
       const email = req.params.email;
       const query = { studentEmail: email };
@@ -245,6 +261,22 @@ async function run() {
       }
       const result = await savedCollection.insertOne(saved);
       res.send(result);
+    });
+
+    // create payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
     // Send a ping to confirm a successful connection
