@@ -47,6 +47,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("flc_db").collection("users");
+    const classCollection = client.db("flc_db").collection("classes");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -68,11 +69,24 @@ async function run() {
       next();
     };
 
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+
     app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
+    // Save user data to db
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -84,6 +98,7 @@ async function run() {
       res.send(result);
     });
 
+    // verify admin by email
     app.get("/users/admin/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
       if (req.decoded.email !== email) {
@@ -92,6 +107,18 @@ async function run() {
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
+    // verify instructor by email
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const result = { instructor: user?.role === "instructor" };
       res.send(result);
     });
 
@@ -119,6 +146,15 @@ async function run() {
         },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+
+    // Class api
+    app.post("/class", verifyJWT, verifyInstructor, async (req, res) => {
+      const newItem = req.body;
+      console.log(newItem);
+      const result = await classCollection.insertOne(newItem);
       res.send(result);
     });
 
