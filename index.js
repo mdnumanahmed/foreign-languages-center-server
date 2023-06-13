@@ -7,7 +7,6 @@ const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
-
 const corsOptions = {
   origin: "*",
   credentials: true,
@@ -234,12 +233,12 @@ async function run() {
 
     // Selected Class api for students
     app.get("/savedClass", async (req, res) => {
-      const {id} = req.query
-      const query = {_id: new ObjectId(id)}
-      const result = await savedCollection.findOne(query)
+      const { id } = req.query;
+      const query = { _id: new ObjectId(id) };
+      const result = await savedCollection.findOne(query);
       res.send(result);
     });
-    
+
     app.get("/savedClass/:email", async (req, res) => {
       const email = req.params.email;
       const query = { studentEmail: email };
@@ -267,7 +266,7 @@ async function run() {
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
-      console.log(amount)
+      console.log(amount);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
@@ -277,6 +276,36 @@ async function run() {
       res.send({
         clientSecret: paymentIntent.client_secret,
       });
+    });
+
+    //Payment related API
+    app.post("/payments/:id", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      payment.createAt = new Date();
+      const insertResult = await paymentCollection.insertOne(payment);
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const deleteResult = await savedCollection.deleteMany(query);
+      res.send({ insertResult, deleteResult });
+    });
+
+    app.put("/payment/:name", async (req, res) => {
+      const name = req.params.name;
+      const filter = { name: name };
+      const options = { upsert: true };
+      const updateDoc = {
+        $inc: {
+          booking: 1,
+        },
+      };
+      const result = await classCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
