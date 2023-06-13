@@ -122,6 +122,19 @@ async function run() {
       res.send(result);
     });
 
+    // verify student by email
+    app.get("/users/student/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false });
+      }
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { student: user?.role === "student" };
+      //  console.log(result);
+      res.send(result);
+    });
+
 
     // make admin api
     app.patch("/users/admin/:id", async (req, res) => {
@@ -151,6 +164,14 @@ async function run() {
 
 
     // Class api
+    app.get("/class/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { instructorEmail: email };
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
+    });
+
+
     app.post("/class", verifyJWT, verifyInstructor, async (req, res) => {
       const newItem = req.body;
       console.log(newItem);
