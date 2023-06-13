@@ -48,6 +48,7 @@ async function run() {
 
     const userCollection = client.db("flc_db").collection("users");
     const classCollection = client.db("flc_db").collection("classes");
+    const savedCollection = client.db("flc_db").collection("savedClasses");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -135,7 +136,6 @@ async function run() {
       res.send(result);
     });
 
-
     // make admin api
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
@@ -169,19 +169,23 @@ async function run() {
       res.send(result);
     });
 
-
     // Class api
-    app.patch("/class/approve/:id", verifyJWT, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          status: "approve",
-        },
-      };
-      const result = await classCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/class/approve/:id",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: "approve",
+          },
+        };
+        const result = await classCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
 
     app.patch("/class/deny/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
@@ -194,7 +198,6 @@ async function run() {
       const result = await classCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-
 
     app.get("/class/:email", async (req, res) => {
       const email = req.params.email;
@@ -214,14 +217,27 @@ async function run() {
       res.send(result);
     });
 
-
     app.post("/class", verifyJWT, verifyInstructor, async (req, res) => {
       const newItem = req.body;
-      console.log(newItem);
       const result = await classCollection.insertOne(newItem);
       res.send(result);
     });
 
+    app.post("/savedClass", async (req, res) => {
+      const saved = req.body;
+      const email = saved.studentEmail;
+      const name = saved.name;
+      const query = {
+        $and: [{ name: { $eq: name } }, { studentEmail: { $eq: email } }],
+      };
+      const existingClass = await savedCollection.findOne(query);
+
+      if (existingClass) {
+        return res.send({ message: "Class  already exists" });
+      }
+      const result = await savedCollection.insertOne(saved);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
