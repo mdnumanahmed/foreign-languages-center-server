@@ -162,9 +162,16 @@ async function run() {
       res.send(result);
     });
 
+    // get all instructor
+    app.get("/instructor", async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+
 
     // Class api
-    app.patch("/class/approve/:id", async (req, res) => {
+    app.patch("/class/approve/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -176,7 +183,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/class/deny/:id", async (req, res) => {
+    app.patch("/class/deny/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -187,7 +194,7 @@ async function run() {
       const result = await classCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    
+
 
     app.get("/class/:email", async (req, res) => {
       const email = req.params.email;
@@ -198,6 +205,12 @@ async function run() {
 
     app.get("/class", verifyJWT, async (req, res) => {
       const result = await classCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/approvedClass", async (req, res) => {
+      const query = { status: "approve" };
+      const result = await classCollection.find(query).toArray();
       res.send(result);
     });
 
