@@ -231,6 +231,18 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $inc: {
+          seats: -1,
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
     // Selected Class api for students
     app.get("/savedClass", async (req, res) => {
       const { id } = req.query;
@@ -259,6 +271,21 @@ async function run() {
         return res.send({ message: "Class  already exists" });
       }
       const result = await savedCollection.insertOne(saved);
+      res.send(result);
+    });
+
+    app.get("/topClass", async (req, res) => {
+      const result = await classCollection
+        .find()
+        .sort({ booking: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/instructor", async (req, res) => {
+      const query = { role: "instructor" };
+      // console.log(query);
+      const result = await userCollection.find(query).toArray();
       res.send(result);
     });
 
